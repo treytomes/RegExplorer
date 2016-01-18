@@ -1,0 +1,76 @@
+﻿<Window x:Class="RegExplorer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RegExplorer"
+        mc:Ignorable="d"
+        Title="{Binding Name}" Width="800" Height="600" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+	<Window.DataContext>
+		<Binding Source="{StaticResource Locator}" Path="Main" />
+	</Window.DataContext>
+	
+    <Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="32" />
+			<RowDefinition Height=".4*"/>
+			<RowDefinition Height="8" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<Menu Grid.Row="0">
+			<MenuItem Margin="4" Header="_Open" Command="{Binding OpenFileCommand}" ToolTip="Open a file to search." />
+			<MenuItem Margin="4" Header="_Search" Command="{Binding RunSearchCommand}" ToolTip="Search the text for the given regular expression." />
+
+			<MenuItem Margin="4" Header="|&lt;" Command="{Binding FirstMatchCommand}" ToolTip="First match." />
+			<MenuItem Margin="4" Header="&lt;&lt;" Command="{Binding PreviousMatchCommand}" ToolTip="Previous match." />
+			<TextBox Text="{Binding CurrentMatchIndex}" />
+			<MenuItem Margin="4" Header="&gt;&gt;" Command="{Binding NextMatchCommand}" ToolTip="Next match." />
+			<MenuItem Margin="4" Header="|&gt;" Command="{Binding LastMatchCommand}" ToolTip="Last match." />
+
+			<TextBlock Margin="4" VerticalAlignment="Top">
+				<Run Text="Matches found:" />
+				<Run Text="{Binding Path=Matches.Count, Mode=OneWay}" />
+			</TextBlock>
+		</Menu>
+
+		<Grid Grid.Row="1">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width=".4*" />
+				<ColumnDefinition Width="8" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+
+			<GroupBox Grid.Column="0" Header="Matches">
+				<ListView ItemsSource="{Binding Matches}" SelectedIndex="{Binding CurrentMatchIndex}">
+					<ListView.ItemTemplate>
+						<DataTemplate>
+							<TextBlock>
+								<Run Text="[" />
+								<Run Text="{Binding LineNumber}" />
+								<Run Text=":" />
+								<Run Text="{Binding ColumnNumber}" />
+								<Run Text="]" />
+								<Run Text="{Binding Path=Match.Value, Mode=OneWay}" />
+							</TextBlock>
+						</DataTemplate>
+					</ListView.ItemTemplate>
+				</ListView>
+			</GroupBox>
+
+			<GridSplitter Grid.Column="1" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" HorizontalAlignment="Stretch" />
+
+			<GroupBox Grid.Column="2" Header="Regular Expression">
+				<TextBox Background="AntiqueWhite" FontFamily="Courier New" Text="{Binding Path=RegularExpression}" />
+			</GroupBox>
+		</Grid>
+
+		<GridSplitter Grid.Row="2" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" HorizontalAlignment="Stretch" />
+
+		<GroupBox Grid.Row="3" Header="Search Text">
+			<ScrollViewer>
+				<RichTextBox FontFamily="Courier New" IsReadOnly="True" local:RichTextBoxHelper.FlowDocument="{Binding SearchTextDocument, Mode=OneWay}" />
+			</ScrollViewer>
+		</GroupBox>
+	</Grid>
+</Window>
