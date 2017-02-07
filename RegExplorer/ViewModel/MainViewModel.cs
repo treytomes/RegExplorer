@@ -30,7 +30,7 @@ namespace RegExplorer.ViewModel
 		#region Fields
 
 		private string _regularExpression;
-		private string _searchText;
+		//private string _searchText;
 		private FlowDocument _searchTextDocument;
 		private int _currentMatchIndex;
 
@@ -50,7 +50,8 @@ namespace RegExplorer.ViewModel
 			else
 			{
 				_regularExpression = string.Empty;
-				_searchText = string.Empty;
+				//_searchText = string.Empty;
+				_searchTextDocument = new FlowDocument();
 				_currentMatchIndex = 0;
 				Matches = new ObservableCollection<MatchInfo>();
 				UpdateSearchHighlighting();
@@ -93,22 +94,22 @@ namespace RegExplorer.ViewModel
 			}
 		}
 
-		public string SearchText
-		{
-			get
-			{
-				return _searchText;
-			}
-			set
-			{
-				if (_searchText != value)
-				{
-					_searchText = value;
-					RaisePropertyChanged(() => SearchText);
-					UpdateSearchHighlighting();
-				}
-			}
-		}
+		//public string SearchText
+		//{
+		//	get
+		//	{
+		//		return _searchText;
+		//	}
+		//	set
+		//	{
+		//		if (_searchText != value)
+		//		{
+		//			_searchText = value;
+		//			RaisePropertyChanged(() => SearchText);
+		//			UpdateSearchHighlighting();
+		//		}
+		//	}
+		//}
 
 		public int CurrentMatchIndex
 		{
@@ -126,7 +127,14 @@ namespace RegExplorer.ViewModel
 					// 0 % 0 = ????
 					if (value < 0)
 					{
-						value = Matches.Count - 1;
+						if (Matches.Count == 0)
+						{
+							value = 0;
+						}
+						else
+						{
+							value = Matches.Count - 1;
+						}
 					}
 					else if (value >= Matches.Count)
 					{
@@ -148,7 +156,7 @@ namespace RegExplorer.ViewModel
 			{
 				return _searchTextDocument;
 			}
-			private set
+			set
 			{
 				if (_searchTextDocument != value)
 				{
@@ -187,7 +195,10 @@ namespace RegExplorer.ViewModel
 			{
 				using (var reader = new StreamReader(dlg.OpenFile()))
 				{
-					SearchText = reader.ReadToEnd();
+					SearchTextDocument = new FlowDocument();
+					SearchTextDocument.Blocks.Clear();
+					SearchTextDocument.Blocks.Add(new Paragraph(new Run(reader.ReadToEnd())));
+					RaisePropertyChanged(() => SearchTextDocument);
 				}
 			}
 		}
@@ -199,75 +210,67 @@ namespace RegExplorer.ViewModel
 
 		private void UpdateSearchHighlighting()
 		{
-			if (string.IsNullOrWhiteSpace(_regularExpression))
-			{
-				var doc = new FlowDocument();
-				var para = new Paragraph();
+			var text = new TextRange(SearchTextDocument.ContentStart, SearchTextDocument.ContentEnd).Text;
+			SearchTextDocument.Blocks.Clear();
+			//SearchTextDocument.Blocks.Add(new Paragraph(new Run(text)));
 
-				var span = CreateInline(1, SearchText, Colors.Transparent);
-
-				//var span = new Span();
-				//var lines = SearchText.Split('\n');
-				//var lineNumber = 1;
-				//foreach (var line in lines)
-				//{
-				//	span.Inlines.Add(new Run(string.Format("{0}:\t", lineNumber)));
-				//	span.Inlines.Add(new Run(string.Format("{0}\n", line)));
-				//	lineNumber++;
-				//}
-
-				para.Inlines.Add(span);
-				doc.Blocks.Add(para);
-				SearchTextDocument = doc;
-			}
-			else
+			var para = new Paragraph();
+			var lastMatchEnd = 0;
+			
+			if (!string.IsNullOrWhiteSpace(_regularExpression))
 			{
 				Matches.Clear();
-				var matches = Regex.Matches(_searchText, _regularExpression ?? string.Empty);
 
-				var doc = new FlowDocument();
-				var para = new Paragraph();
-
-				var lastMatchEnd = 0;
-				foreach (var match in matches.Cast<Match>())
+				try
 				{
-					var startIndex = match.Index;
-					var length = match.Length;
+					var matches = Regex.Matches(text, _regularExpression ?? string.Empty, RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
 
-					// Add the un-highlighted text that wasn't matched.
-					var lastMatchLength = match.Index - lastMatchEnd;
-					var lastMatchLineNumber = _searchText.Take(lastMatchEnd).Count(ch => ch == '\n') + 1;
-					para.Inlines.Add(CreateInline(lastMatchLineNumber, SearchText.Substring(lastMatchEnd, lastMatchLength), Colors.Transparent));
-
-					// Add the highlighted match text.
-					var matchLineNumber = _searchText.Take(match.Index).Count(ch => ch == '\n') + 1;
-					var matchedText = CreateInline(matchLineNumber, SearchText.Substring(startIndex, length), Colors.Yellow);
-					para.Inlines.Add(matchedText);
-
-					lastMatchEnd = startIndex + length;
-					
-					Matches.Add(new MatchInfo()
+					foreach (var match in matches.Cast<Match>())
 					{
-						LineNumber = matchLineNumber,
-						ColumnNumber = match.Index - _searchText.LastIndexOf('\n', match.Index),
-						Match = match,
-						Text = matchedText
-					});
+						var startIndex = match.Index;
+						var length = match.Length;
+
+						// Add the un-highlighted text that wasn't matched.
+						var lastMatchLength = match.Index - lastMatchEnd;
+						para.Inlines.Add(CreateInline(text.Substring(lastMatchEnd, lastMatchLength), Colors.Transparent));
+
+						lastMatchEnd = startIndex + length;
+
+						//var lastMatchLineNumber = text.Take(lastMatchEnd).Count(ch => ch == '\n') + 1;
+
+						// Add the highlighted match text.
+						var matchLineNumber = text.Take(match.Index).Count(ch => ch == '\n') + 1;
+
+						var matchedText = CreateInline(text.Substring(startIndex, length), Colors.Yellow);
+						para.Inlines.Add(matchedText);
+
+						Matches.Add(new MatchInfo()
+						{
+							LineNumber = matchLineNumber,
+							ColumnNumber = match.Index - ((match.Index == text.Length) ? match.Index : text.LastIndexOf('\n', match.Index)),
+							Match = match,
+							Text = matchedText
+						});
+					}
 				}
-
-				// Add any remaining text.
-				para.Inlines.Add(new Run(SearchText.Substring(lastMatchEnd)));
-
-				doc.Blocks.Add(para);
-
-				SearchTextDocument = doc;
-
-				_currentMatchIndex = 0;
-				BringCurrentMatchIntoView();
+				catch (Exception)
+				{
+					// Probably a badly-formatted regular expression.
+				}
 			}
+
+			// Add any remaining text.
+			para.Inlines.Add(new Run(text.Substring(lastMatchEnd)));
+
+			SearchTextDocument.Blocks.Add(para);
+
+			_currentMatchIndex = 0;
+			BringCurrentMatchIntoView();
+
+			RaisePropertyChanged(() => SearchTextDocument);
 		}
 
-		private Inline CreateInline(int lineNumber, string text, Color backgroundColor)
+		private Inline CreateInline(string text, Color backgroundColor)
 		{
 			var span = new Span();
 			span.Background = new SolidColorBrush(backgroundColor);
@@ -299,7 +302,10 @@ namespace RegExplorer.ViewModel
 		private void BringMatchIntoView(int matchIndex)
 		{
 			DoEvents();
-			Matches[_currentMatchIndex].Text.BringIntoView();
+			if ((0 <= matchIndex) && (matchIndex < Matches.Count))
+			{
+				Matches[matchIndex].Text.BringIntoView();
+			}
 		}
 
 		private static void DoEvents()
@@ -313,6 +319,7 @@ namespace RegExplorer.ViewModel
 		{
 			if ((0 <= matchIndex) && (matchIndex < Matches.Count))
 			{
+				//Matches[matchIndex].Text.ApplyPropertyValue(TextElement.BackgroundProperty, new SolidColorBrush(backgroundColor));
 				Matches[matchIndex].Text.Background = new SolidColorBrush(backgroundColor);
 			}
 		}

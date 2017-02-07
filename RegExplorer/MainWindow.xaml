@@ -9,6 +9,12 @@
 	<Window.DataContext>
 		<Binding Source="{StaticResource Locator}" Path="Main" />
 	</Window.DataContext>
+
+	<Window.InputBindings>
+		<KeyBinding Key="F5" Command="{Binding RunSearchCommand}" />
+		<KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding RunSearchCommand}" />
+		<KeyBinding Key="F3" Command="{Binding NextMatchCommand}" />
+	</Window.InputBindings>
 	
     <Grid>
 		<Grid.RowDefinitions>
@@ -61,7 +67,8 @@
 			<GridSplitter Grid.Column="1" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" HorizontalAlignment="Stretch" />
 
 			<GroupBox Grid.Column="2" Header="Regular Expression">
-				<TextBox Background="AntiqueWhite" FontFamily="Courier New" Text="{Binding Path=RegularExpression}" />
+				<TextBox Background="AntiqueWhite" FontFamily="Courier New" Text="{Binding Path=RegularExpression, UpdateSourceTrigger=PropertyChanged}"
+						 TextWrapping="Wrap" AcceptsReturn="True" AcceptsTab="True" />
 			</GroupBox>
 		</Grid>
 
@@ -69,7 +76,7 @@
 
 		<GroupBox Grid.Row="3" Header="Search Text">
 			<ScrollViewer>
-				<RichTextBox FontFamily="Courier New" IsReadOnly="True" local:RichTextBoxHelper.FlowDocument="{Binding SearchTextDocument, Mode=OneWay}" />
+				<RichTextBox FontFamily="Consolas" local:RichTextBoxHelper.FlowDocument="{Binding SearchTextDocument, UpdateSourceTrigger=PropertyChanged}" />
 			</ScrollViewer>
 		</GroupBox>
 	</Grid>
